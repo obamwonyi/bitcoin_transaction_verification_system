@@ -1,1 +1,0 @@
-# for mining new blocks

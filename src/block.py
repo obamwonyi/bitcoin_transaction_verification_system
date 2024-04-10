@@ -1,1 +1,8 @@
-# for creating and managing blocks
+
+
+class Block:
+    """
+    This class is responsible for creating blocks
+    """
+    pass
+
