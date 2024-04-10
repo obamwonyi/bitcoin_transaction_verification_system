@@ -1,7 +1,6 @@
 import os
 import asyncio
-from src.transaction import Transaction
-from src.schema import TransactionSchema
+from src.transaction import Transaction, TransactionSchema
 from src.validation import validate_transactions
 from src.mine import Mine
 
