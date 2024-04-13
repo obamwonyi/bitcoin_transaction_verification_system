@@ -7,7 +7,7 @@ async def validate_transaction(transaction) -> bool:
     :param transaction: a transaction to be validated
     :return: bool
     """
-    pass
+    
 
 async def validate_transactions(transactions) -> list:
     """
@@ -27,5 +27,5 @@ async def validate_transactions(transactions) -> list:
     for tx, is_valid in zip(transactions, validation_results):
         if is_valid:
             valid_transactions.append(tx)
-
+    
     return valid_transactions
