@@ -1,4 +1,6 @@
-from marshmallow import Schema, fields, post_load
+# transaction.py
+from marshmallow import Schema, fields, post_load, ValidationError
+from typing import Optional
 
 class PrevOutSchema(Schema):
     scriptpubkey = fields.Str(required=True)
@@ -14,7 +16,7 @@ class VinSchema(Schema):
     scriptsig = fields.Str(required=True)
     scriptsig_asm = fields.Str(required=True)
     witness = fields.List(fields.Str(), required=False)
-    is_coinbase = fields.Bool(required=True)
+    is_coinbase = fields.Bool(required=False, missing="")
     sequence = fields.Int(required=True)
     inner_redeemscript_asm = fields.Str(required=False)
     inner_witnessscript_asm = fields.Str(required=False)

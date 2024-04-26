@@ -33,6 +33,7 @@ async def main():
     # Step 2: Validate transactions asynchronously
     valid_transactions = await validate_transactions(transactions)
 
+    print(valid_transactions)
     # Step 3: Mine the block
     block_data = mine_block(valid_transactions)
 
