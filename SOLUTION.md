@@ -72,6 +72,13 @@ Overall, this code defines the data structure and schema for representing transa
 <br>
 <br>
 
+> ## validate.py
+**Validation process**
+---
+To be documented
+
+<br>
+<br>
 
 > ## mine.py
 
