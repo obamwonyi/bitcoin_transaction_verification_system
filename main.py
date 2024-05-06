@@ -3,9 +3,12 @@ import asyncio
 # TODO: replace json with a serializer
 import json
 from src.transaction import Transaction, TransactionSchema
-from src.validation import validate_transactions
+from src.validation import ValidateTransaction
 from marshmallow import ValidationError
 from src.mine import mine_block
+from collections import defaultdict
+
+TRANSACTION_BY_ID = defaultdict(dict)
 
 # TODO: Remove
 async def main():
@@ -19,8 +22,13 @@ async def main():
             transaction_schema = TransactionSchema()
             try:
                 loaded_data = json.loads(json_data)
-                transaction = transaction_schema.load(loaded_data)
-                transactions.append(transaction)
+                # transaction = transaction_schema.load(loaded_data)
+                for tx_input in loaded_data.get("vin", []):
+                    txid = tx_input.get("txid")
+                    if txid:
+                        TRANSACTION_BY_ID[txid] = loaded_data
+
+                transactions.append(loaded_data)
                 # print(f"Deserialized transaction from {filename}")
             except ValidationError as e:
                 # errors = errors + 1
@@ -31,9 +39,14 @@ async def main():
     # print(f"Total failed transactions:{errors}")
 
     # Step 2: Validate transactions asynchronously
-    valid_transactions = await validate_transactions(transactions)
+    validate_transaction = ValidateTransaction(TRANSACTION_BY_ID)
+    valid_transactions = await validate_transaction.validate_transactions(transactions)
+
+    # implement an initial transaction validation process.
 
     print(valid_transactions)
+
+    # print(valid_transactions)
     # Step 3: Mine the block
     block_data = mine_block(valid_transactions)
 

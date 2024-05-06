@@ -1,147 +1,160 @@
 import asyncio
 
-from bitcoin.core import MAX_BLOCK_SIZE
-from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.exceptions import InvalidSignature
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.backends import default_backend
-from typing import Tuple
-from bitcoinlib.transactions import Transaction as BitcoinTransaction
 
-async def validate_transaction(transaction) -> Tuple[bool, str]:
-    """
-    Validate a single transaction.
-    :param transaction: The transaction to validate.
-    :return: A tuple containing a boolean indicating whether the transaction is valid, and a string message.
-    """
-    # Check if the transaction has inputs and outputs
-    if not transaction.vin:
-        return False, "Transaction has no inputs"
-    if not transaction.vout:
-        return False, "Transaction has no outputs"
+class ValidateTransaction:
 
-    # Initialize the total input and output values
-    total_input_value = 0
-    total_output_value = 0
-    # Iterate over the inputs
-    for tx_input in transaction.vin:
-        # Handle coinbase transactions separately
-        if tx_input.is_coinbase:
-            # Coinbase transactions have specific rules that need to be validated
-            # Check if the coinbase transaction follows the correct format
-            # and has a valid block height and coinbase value
-            if not validate_coinbase_transaction(tx_input):
-                return False, f"Invalid coinbase transaction input: {tx_input}"
+    def __init__(self, transaction_by_id):
+        self.transaction_by_id = transaction_by_id
+
+    def validate_transaction_version(self, tx) -> bool:
+        """
+        Validate the transaction version.
+        :param tx:
+        :return: Bool
+        """
+        if tx.get("version") == 1 or tx.get("version") == 2:
+            return True
+        return False
+
+    async def retrieve_transaction(self, txid) -> dict:
+        """
+        Retrieve a transaction from its ID
+        :param txid: Transaction ID
+        :return: dictionary form of transaction
+        """
+        transaction = self.transaction_by_id.get(txid)
+        if transaction:
+            return transaction
         else:
-            # Extract the public key from the input witness
-            if not tx_input.witness:
-                return False, f"Input {tx_input.txid}:{tx_input.vout} has no witness"
+            print(f"Transaction with txid {txid} not found")
+            return None
 
-            public_key_bytes = bytes.fromhex(tx_input.witness[-1])
+    async def verify_input_script(self, prev_tx, vout, script_pubkey) -> bool:
+        """
+        Validates the scriptSig or witness.
+        :param prev_tx: Previous transaction dictionary
+        :param vout: Output index
+        :param script_pubkey: ScriptPubKey to be verified
+        :return: bool
+        """
+        prev_output = prev_tx["vout"][vout]
+        return prev_output["scriptpubkey"] == script_pubkey
 
-            # Construct the public key object
-            public_key = ec.EllipticCurvePublicKey.from_encoded_point(ec.SECP256K1(), public_key_bytes)
+    async def is_valid_output_script(self, scriptpubkey):
+        """
+        Validate the script public key of the output
+        :param scriptpubkey:
+        :return:
+        """
 
-            # Extract the signature from the input witness
-            signature_bytes = b"".join(bytes.fromhex(witness_item) for witness_item in tx_input.witness[:-1])
+    async def validate_transaction_amount(self, tx) -> bool:
+        """
+        Validates the transaction amount
+        :param tx:
+        :return: bool
+        """
+        # Implement logic to validate the transaction amount
+        pass
 
-            # Get the transaction data that was signed for this input
-            tx_input_data = get_tx_input_data(transaction, tx_input)
+    async def get_prev_tx_output(self, txid, vout) -> (list, None):
+        """
+        Retrieves the previous transaction output.
+        :param txid: Transaction ID
+        :param vout: Output index
+        :return: A tuple containing the previous transaction and the specified output,
+        or (None, None) if they don't exist
+        """
+        # Step 1: Retrieve the previous transaction
+        prev_tx = await self.retrieve_transaction(txid)
+        if prev_tx is None:
+            print(f"Previous transaction with txid {txid} not found")
+            return None, None
 
-            # Define the signature algorithm
-            signature_algorithm = ec.EllipticCurveSignatureAlgorithm(hashes.SHA256())
+        prev_output = prev_tx.get("vout")
+        # Step 2: Check if the specified output index exists
+        if vout >= len(prev_output):
+            return None, None
 
-            try:
-                # Verify the signature using the public key, signature, and transaction data
-                public_key.verify(
-                    signature_bytes,
-                    tx_input_data,
-                    signature_algorithm
-                )
-            except InvalidSignature:
-                return False, f"Invalid signature for input {tx_input.txid}:{tx_input.vout}"
+        return prev_tx, prev_output
 
-            # Add the input value to the total input value
-            total_input_value += tx_input.prevout.value
+        # Step 3: Verify that the output is unspent
+        # if not await self.is_unspent(prev_tx, vout):
+        #     return None, None
 
-            # Validate the input script
-            try:
-                bitcoin_tx = BitcoinTransaction.from_dict(transaction)
-                bitcoin_tx.verify_input_signature(tx_input.vout)
-            except Exception as e:
-                return False, f"Invalid input script for {tx_input.txid}:{tx_input.vout}: {str(e)}"
+        # # Step 4: Retrieve the script pub key from the referred output
+        # script_pubkey = prev_tx.get("vout")[0].get("scriptpubkey")
+        #
+        # # Step 5: Validate the scriptSig or Witness
+        # if not await self.validate_script(prev_tx, vout, script_pubkey):
+        #     return None, None
 
-    # Iterate over the outputs
-    for tx_output in transaction.vout:
-        # Add the output value to the total output value
-        total_output_value += tx_output.value
+        # Step 6: Ensure the sum of input values is greater than or equal to the sum of output values
+        if not await self.validate_transaction_amount(prev_tx):
+            return None, None
 
-        # Validate the output script
-        try:
-            bitcoin_tx = BitcoinTransaction.from_dict(transaction)
-            bitcoin_tx.verify_output_script(tx_output.scriptpubkey_asm)
-        except Exception as e:
-            return False, f"Invalid output script: {str(e)}"
+        return prev_tx, prev_tx.get("vout")[vout]
 
-    # Check if the total input value is greater than or equal to the total output value
-    if total_input_value < total_output_value:
-        return False, "Total input value is less than total output value"
+    async def validate_locktime_and_sequence(self, tx):
+        """
+        Validates Transactions locktime
+        :param tx:
+        :return:
+        """
+        pass
 
-    # Calculate the transaction fee
-    transaction_fee = total_input_value - total_output_value
+    async def is_double_spend(self, tx):
+        """
+        Check if the transaction is double spent
+        :param tx:
+        :return:
+        """
+    async def validate_transaction(self, tx) -> (bool, str):
+        """
+        :param tx:
+        :return: validated transaction
+        """
+        if not self.validate_transaction_version(tx):
+            return False, f"Transaction has invalid version \n"
 
-    # Validate transaction fee according to the fee rules
-    if transaction_fee < 0:
-        return False, "Transaction fee cannot be negative"
+        total_input_value = 0
 
-    # Check if the transaction size exceeds the maximum block size
-    transaction_size = sum(len(tx_input.scriptsig) for tx_input in transaction.vin) + \
-                       sum(len(tx_output.scriptpubkey) for tx_output in transaction.vout)
-    if transaction_size > MAX_BLOCK_SIZE:
-        return False, "Transaction size exceeds the maximum block size"
+        for tx_input in tx.get("vin"):
+            prev_tx, prev_outputs = await self.get_prev_tx_output(tx_input["txid"], tx_input["vout"])
+            if not prev_outputs:
+                return False, "Previous output not found"
 
-    return True, "Transaction is valid"
+            for prev_output in prev_outputs:
+                total_input_value += prev_output["value"]
 
-def validate_coinbase_transaction(tx_input) -> bool:
-    """
-    Validate a coinbase transaction input.
-    :param tx_input: The coinbase transaction input to validate.
-    :return: True if the coinbase transaction input is valid, False otherwise.
-    """
-    # Implement your coinbase transaction validation logic here
-    # For example, you could check if the block height and coinbase value are valid
-    # based on the current network rules and block subsidies.
-    # This is just a placeholder function, you need to implement the actual validation logic.
-    return True
+                vout = tx_input["vout"]
 
-async def validate_transactions(transactions) -> list:
-    """
-    Validate a list of transactions asynchronously.
-    :param transactions: A list of transactions to validate.
-    :return: A list of valid transactions.
-    """
-    async_tasks = [validate_transaction(tx) for tx in transactions]
+                if not self.verify_input_script(prev_tx, vout, prev_output["scriptpubkey"]):
+                    return False, "Failed to verify input script"
+                total_input_value += prev_output.get("value")
 
-    try:
-        validation_results = await asyncio.gather(*async_tasks)
-    except Exception as e:
-        print(f"An error occurred during transaction validation, Error: {e}")
-        return []
+            # Validate outputs
+            total_output_value = sum(output.get("value") for output in tx.get("vout"))
+            if total_output_value > total_input_value:
+                return False
 
-    valid_transactions = [tx for tx, (is_valid, _) in zip(transactions, validation_results) if is_valid]
+            for output in tx.get("vout"):
+                if not self.is_valid_output_script(output.get("scriptpubkey")):
+                    return False
 
-    return valid_transactions
+            if not self.validate_locktime_and_sequence(tx):
+                return False
 
-def get_tx_input_data(transaction, tx_input):
-    """
-    Helper function to construct the transaction data that was signed for a given input.
-    This implementation assumes the transaction version is 1 or higher.
-    """
-    tx_data = b""
-    tx_data += transaction.version.to_bytes(4, byteorder="little")
-    tx_data += tx_input.prevout.scriptpubkey.encode()
-    tx_data += tx_input.prevout.value.to_bytes(8, byteorder="little")
-    tx_data += tx_input.sequence.to_bytes(4, byteorder="little")
-    tx_data += transaction.locktime.to_bytes(4, byteorder="little")
+            if self.is_double_spend(tx):
+                return False
 
-    return tx_data
+            return True
+        # print("Transaction has valid version") tested
+
+    async def validate_transactions(self, transactions):
+        """
+        Validates and gathers all valid transactions that would later be mined.
+        :param transactions:
+        :return:
+        """
+        tasks = [self.validate_transaction(transaction) for transaction in transactions]
+        return await asyncio.gather(*tasks)
