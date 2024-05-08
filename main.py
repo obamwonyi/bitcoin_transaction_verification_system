@@ -14,7 +14,6 @@ TRANSACTION_BY_ID = defaultdict(dict)
 async def main():
     # Step 1: Read and deserialize transactions from the mempool directory
     transactions = []
-    # errors = 0
     for filename in os.listdir("mempool"):
         filepath = os.path.join("mempool", filename)
         with open(filepath, "r") as file:
@@ -22,9 +21,10 @@ async def main():
             transaction_schema = TransactionSchema()
             try:
                 loaded_data = json.loads(json_data)
-                # transaction = transaction_schema.load(loaded_data)
-                for tx_input in loaded_data.get("vin", []):
-                    txid = tx_input.get("txid")
+                transaction = transaction_schema.load(loaded_data)
+
+                for tx_input in transaction.vin:
+                    txid = tx_input["txid"]
                     if txid:
                         TRANSACTION_BY_ID[txid] = loaded_data
 
@@ -39,12 +39,11 @@ async def main():
     # print(f"Total failed transactions:{errors}")
 
     # Step 2: Validate transactions asynchronously
-    validate_transaction = ValidateTransaction(TRANSACTION_BY_ID)
-    valid_transactions = await validate_transaction.validate_transactions(transactions)
+    # valid_transactions = await validate_transaction.validate_transactions(transactions)
 
     # implement an initial transaction validation process.
 
-    print(valid_transactions)
+    # print(valid_transactions)
 
     # print(valid_transactions)
     # Step 3: Mine the block

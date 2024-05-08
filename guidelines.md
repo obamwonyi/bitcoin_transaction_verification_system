@@ -51,6 +51,3 @@ In this assignment, you should treat the transaction validation and mining proce
 - Since multiple tasks are running concurrently, you may need to implement proper synchronization mechanisms to avoid race conditions or data corruption.
 - Use Python's `asyncio` locks, semaphores, or other synchronization primitives to control access to shared resources, such as the dictionary of valid transactions.
 
-By following this asynchronous approach, you can take advantage of concurrent execution, potentially improving the overall performance of your solution. However, keep in mind that asynchronous programming can introduce additional complexity, and you'll need to handle potential exceptions, errors, and edge cases appropriately.
-
-Remember to document your approach, implementation details, and any challenges you faced in the `SOLUTION.md` file, as per the assignment requirements.
