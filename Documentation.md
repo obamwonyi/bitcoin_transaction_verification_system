@@ -1,4 +1,4 @@
-## Start Project
+## Start Program
 ```shell
 ./run.sh
 ```
