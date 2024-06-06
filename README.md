@@ -5,10 +5,6 @@ This program is mainly focused on the various scripts that verifies is a particu
 from he mempool folder is valid, if valid it is added to a batch of transactions that are to be mined as a block
 and added to the blockchain. In summary, it is a basic implementation of the Bitcoin mining process.
 
-### Contributors 
-*responsible for blockchain validation automation with Github actions* <br>
-https://github.com/theanmolsharma <br>
-https://github.com/adi-shankara  <br>
 
 ### Key Functionalities
 #### 1. Transaction Validation with the various scripts
@@ -49,6 +45,11 @@ The block header is serialized into a byte stream.
 The serialized block header is passed through a double SHA-256 hash function (SHA-256 applied twice).
 The resulting 256-bit (32-byte) hash value is the block hash or block ID.
 
+
+### Contributors 
+*responsible for blockchain validation automation with Github actions* <br>
+https://github.com/theanmolsharma <br>
+https://github.com/adi-shankara  <br>
 
 ### Reference
 * https://learnmeabitcoin.com/
