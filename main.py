@@ -31,6 +31,7 @@ async def main():
     valid_transactions = await validate_transaction.validate_transactions(transactions)
 
     # Step 3: Mine the block
+    print("Attempting to mine block of transaction")
     block_data = mine_block(valid_transactions)
 
     # Step 4: Write the block data to the output.txt file
